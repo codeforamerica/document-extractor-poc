@@ -6,8 +6,9 @@ import * as pdfjsLib from 'pdfjs-dist';
 import '../pdf-viewer.css';
 
 export default function VerifyPage({ signOut }) {
-  // Set up PDF.js to use the local worker file
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  // Enable PDF.js fake worker mode to avoid CORS/MIME type issues
+  // This is not as performant but will work in all environments
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
   
   const [documentId] = useState(() => sessionStorage.getItem('documentId'));
   const [responseData, setResponseData] = useState(null); // API response
