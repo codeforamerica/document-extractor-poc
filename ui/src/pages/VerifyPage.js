@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import { authorizedFetch } from '../utils/api';
 import { useNavigate } from 'react-router';
+import * as pdfjsLib from 'pdfjs-dist';
+import 'pdfjs-dist/build/pdf.worker.js';
+import '../pdf-viewer.css';
 
 export default function VerifyPage({ signOut }) {
   const [documentId] = useState(() => sessionStorage.getItem('documentId'));
@@ -10,6 +13,10 @@ export default function VerifyPage({ signOut }) {
   const [error, setError] = useState(false); // tracks when there is an error
   const [activeBoundingBox, setActiveBoundingBox] = useState(null); // tracks the currently focused field's bounding box
   const previewContainerRef = useRef(null);
+  const pdfCanvasRef = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState(null);
+  const [pdfDocument, setPdfDocument] = useState(null);
 
   const navigate = useNavigate();
 
@@ -119,6 +126,12 @@ export default function VerifyPage({ signOut }) {
   function handleInputFocus(field) {
     if (field.boundingBox) {
       setActiveBoundingBox(field.boundingBox);
+      
+      // If we have a PDF open, re-render with the bounding box
+      if (responseData?.document_key?.split('.')?.pop()?.toLowerCase() === 'pdf' && 
+          pdfDocument && pdfCanvasRef.current) {
+        // The PDF will re-render automatically due to the useEffect dependency on activeBoundingBox
+      }
     }
   }
 
@@ -178,6 +191,95 @@ export default function VerifyPage({ signOut }) {
       });
   }
 
+  // Function to render a PDF page with bounding box overlay
+  const renderPdf = async (pdfData, pageNum) => {
+    if (!pdfCanvasRef.current) return;
+    
+    try {
+      // Load the PDF data
+      const loadingTask = pdfjsLib.getDocument({ data: atob(pdfData) });
+      const pdf = await loadingTask.promise;
+      setPdfDocument(pdf);
+      setNumPages(pdf.numPages);
+      
+      // Get the page
+      const page = await pdf.getPage(pageNum);
+      
+      // Get the canvas context
+      const canvas = pdfCanvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      // Calculate the scale to fit the canvas
+      const viewport = page.getViewport({ scale: 1 });
+      const containerWidth = previewContainerRef.current.clientWidth;
+      const scale = containerWidth / viewport.width;
+      const scaledViewport = page.getViewport({ scale });
+      
+      // Set canvas dimensions
+      canvas.height = scaledViewport.height;
+      canvas.width = scaledViewport.width;
+      
+      // Render the PDF page
+      const renderContext = {
+        canvasContext: context,
+        viewport: scaledViewport
+      };
+      
+      await page.render(renderContext).promise;
+      
+      // If there's an active bounding box, draw it on the canvas
+      if (activeBoundingBox) {
+        drawBoundingBoxOnCanvas(context, activeBoundingBox, scaledViewport);
+      }
+    } catch (error) {
+      console.error('Error rendering PDF:', error);
+    }
+  };
+  
+  // Function to draw a bounding box on the canvas
+  const drawBoundingBoxOnCanvas = (context, boundingBox, viewport) => {
+    if (!boundingBox) return;
+    
+    const { Left, Top, Width, Height } = boundingBox;
+    
+    // Calculate coordinates based on the viewport
+    const x = Left * viewport.width;
+    const y = Top * viewport.height;
+    const width = Width * viewport.width;
+    const height = Height * viewport.height;
+    
+    // Save current context state
+    context.save();
+    
+    // Set bounding box styles
+    context.strokeStyle = '#0050d8';
+    context.lineWidth = 2;
+    context.setLineDash([5, 3]); // Dotted line
+    context.fillStyle = 'rgba(0, 80, 216, 0.1)';
+    
+    // Draw rectangle
+    context.fillRect(x, y, width, height);
+    context.strokeRect(x, y, width, height);
+    
+    // Restore context state
+    context.restore();
+  };
+  
+  // Function to handle page navigation
+  const changePage = (newPage) => {
+    if (newPage >= 1 && newPage <= numPages) {
+      setCurrentPage(newPage);
+    }
+  };
+  
+  // Effect to re-render PDF when active bounding box changes
+  useEffect(() => {
+    if (responseData?.base64_encoded_file && 
+        responseData.document_key.split('.').pop().toLowerCase() === 'pdf') {
+      renderPdf(responseData.base64_encoded_file, currentPage);
+    }
+  }, [activeBoundingBox, currentPage, responseData]);
+
   function displayFilePreview() {
     if (!responseData || !responseData.base64_encoded_file) return null;
 
@@ -194,23 +296,31 @@ export default function VerifyPage({ signOut }) {
     return (
       <div id="file-display-container" ref={previewContainerRef} className="position-relative">
         {fileExtension === 'pdf' ? (
-          <>
-            <iframe
-              src={base64Src}
-              width="100%"
-              height="600px"
-              title="Document Preview"
-            ></iframe>
-            {activeBoundingBox && fileExtension === 'pdf' && (
-              <div className="usa-alert usa-alert--info usa-alert--slim">
-                <div className="usa-alert__body">
-                  <p className="usa-alert__text">
-                    Bounding box highlighting is currently only available for image files, not PDF documents.
-                  </p>
-                </div>
+          <div className="pdf-container">
+            <canvas ref={pdfCanvasRef} className="pdf-canvas" />
+            
+            {numPages > 1 && (
+              <div className="pdf-controls usa-pagination">
+                <button 
+                  onClick={() => changePage(currentPage - 1)} 
+                  disabled={currentPage <= 1}
+                  className="usa-button usa-button--outline"
+                >
+                  Previous
+                </button>
+                <span className="page-info">
+                  Page {currentPage} of {numPages}
+                </span>
+                <button 
+                  onClick={() => changePage(currentPage + 1)} 
+                  disabled={currentPage >= numPages}
+                  className="usa-button usa-button--outline"
+                >
+                  Next
+                </button>
               </div>
             )}
-          </>
+          </div>
         ) : (
           <div className="position-relative">
             <img
