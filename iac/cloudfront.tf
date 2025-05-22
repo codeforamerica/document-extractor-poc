@@ -13,6 +13,26 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   signing_protocol                 = "sigv4"
 }
 
+# Invalidate CloudFront cache on each deployment
+resource "null_resource" "invalidate_cloudfront" {
+  # This will trigger on every apply
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  # Local-exec provisioner to run AWS CLI command
+  provisioner "local-exec" {
+    command = <<EOT
+      aws cloudfront create-invalidation \
+        --distribution-id ${aws_cloudfront_distribution.distribution.id} \
+        --paths '/*' \
+        --region ${var.region}
+    EOT
+  }
+
+  depends_on = [aws_cloudfront_distribution.distribution]
+}
+
 resource "aws_cloudfront_distribution" "distribution" {
   enabled = true
   comment = "${local.project} ${var.environment} website"

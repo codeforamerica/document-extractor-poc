@@ -35,8 +35,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "document_storage_lifecycles" {
 
 resource "aws_s3_bucket" "website_storage" {
   bucket = "${local.project}-${var.environment}-website-${data.aws_caller_identity.current.account_id}"
-
   force_destroy = true
+}
+
+resource "aws_s3_bucket_versioning" "website_storage_versioning" {
+  bucket = aws_s3_bucket.website_storage.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_website_configuration" "website_configuration" {
