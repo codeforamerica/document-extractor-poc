@@ -126,7 +126,7 @@ textract_form_adapters_env_var_mapping = {}
 
 2. Initialize Terraform (downloads required providers and sets up your backend):
    ```bash
-   terraform init
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 terraform init
    ```
    > If you get an error about the backend configuration, double-check that you've created the S3 bucket and DynamoDB table, and that your AWS credentials have permission to access them.
 
@@ -138,7 +138,7 @@ textract_form_adapters_env_var_mapping = {}
 
 4. Create the actual resources in AWS:
    ```bash
-   terraform apply "tfplan"
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 terraform apply "tfplan"
    ```
    > This step will take 5-10 minutes to complete. When finished, it will output important information like the CloudFront URL that you'll use to access your application.
 
@@ -234,3 +234,18 @@ terraform destroy
 ## Support
 
 For additional help, please refer to the project documentation or open an issue in the repository.
+
+
+
+
+==== notes on public private cloudfront
+Added secure private access:
+
+cloudfront.tf • Introduced aws_cloudfront_origin_access_control (SigV4).
+• S3 origin now references bucket_regional_domain_name, attaches the new OAC via origin_access_control_id, and uses s3_origin_config.
+• Added default_root_object = "index.html".
+s3.tf • Replaced permissive resources with private ones:
+– New aws_s3_bucket_public_access_block.private_website keeps public blocked while allowing CloudFront.
+– New bucket-policy (website_read) built from data.aws_iam_policy_document.cf_read, which permits s3:GetObject only when the caller is CloudFront and the request’s SourceArn equals the distribution ARN.
+• Old public-allowing block/policy resources are commented for removal.
+Now only CloudFront, via Origin Access Control, can read objects; the bucket is otherwise private.

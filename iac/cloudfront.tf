@@ -25,12 +25,7 @@ resource "aws_cloudfront_distribution" "distribution" {
   origin {
     domain_name = aws_s3_bucket.website_storage.bucket_regional_domain_name
     origin_id   = local.s3_origin_id
-
     origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
-
-    s3_origin_config {
-      origin_access_identity = null
-    }
   }
 
   origin {
