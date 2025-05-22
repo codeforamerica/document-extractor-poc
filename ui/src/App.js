@@ -1,21 +1,21 @@
 import { Routes, Route, useNavigate } from 'react-router';
-import UploadPage from './pages/UploadPage/UploadPage';
-import VerifyPage from './pages/VerifyPage/VerifyPage';
-import DownloadPage from './pages/DownloadPage/DownloadPage';
+import UploadPage from './pages/UploadPage';
+import VerifyPage from './pages/VerifyPage';
+import DownloadPage from './pages/DownloadPage';
 import NotSignedInPage from './pages/NotSignedInPage';
-import SignInPage from './pages/SignInPage/SignInPage';
+import SignInPage from './pages/SignInPage';
 import { useEffect, useState } from 'react';
 
 export default function App() {
-  const [authToken, setAuthToken] = useState<string>(() => {
+  const [authToken, setAuthToken] = useState(() => {
     return sessionStorage.getItem('auth_token') || '';
   });
 
-  const [justSignedOut, setJustSignedOut] = useState<boolean>(false);
+  const [justSignedOut, setJustSignedOut] = useState(false);
 
   const navigate = useNavigate();
 
-  async function signOut(): Promise<void> {
+  async function signOut() {
     setAuthToken('');
     setJustSignedOut(true);
     navigate('/');

@@ -1,18 +1,77 @@
-import Layout from '../../components/Layout';
-import { useUploadPage } from './useUploadPage';
+import { useState, useRef } from 'react';
+import Layout from '../components/Layout';
+import { authorizedFetch } from '../utils/api';
+import { useNavigate } from 'react-router';
 
-interface UploadPageProps {
-  signOut: () => Promise<void>;
-}
+export default function UploadPage({ signOut }) {
+  // state for alert messages
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertType, setAlertType] = useState(null);
+  const fileInputRef = useRef(null);
 
-export default function UploadPage({ signOut }: UploadPageProps) {
-  const { alertMessage, alertType, fileInputRef, handleSubmit } =
-    useUploadPage(signOut);
+  const navigate = useNavigate();
+
+  function showAlert(message, type) {
+    setAlertMessage(message);
+    setAlertType(type);
+  }
+
+  // handle form submission
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const file = fileInputRef.current?.files[0];
+
+    if (!file) {
+      showAlert('Please select a file to upload!', 'error');
+      return;
+    }
+
+    // read file as Base64
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+
+    reader.onload = async function () {
+      const base64File = reader.result.split(',')[1];
+      const requestBody = {
+        file_content: base64File,
+        file_name: file.name,
+      };
+
+      try {
+        const apiUrl = '/api/document';
+        const response = await authorizedFetch(apiUrl, {
+          method: 'POST',
+          body: JSON.stringify(requestBody),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          sessionStorage.setItem('documentId', data.documentId);
+          showAlert('File uploaded successfully!', 'success, fake id', data.id);
+          navigate('/verify-document');
+        } else if (response.status === 401 || response.status === 403) {
+          showAlert(
+            'You are no longer signed in!  Please sign in again.  You will be navigated to the sign in page in a few seconds.',
+            'error'
+          );
+          setTimeout(() => {
+            signOut();
+          }, 5000);
+        } else {
+          showAlert('File failed to upload!', 'error');
+        }
+      } catch (error) {
+        console.error('Upload failed:', error);
+        showAlert('An error occurred while uploading!', 'error');
+      }
+    };
+  }
 
   return (
     <Layout signOut={signOut}>
       <div className="site-wrapper grid-container padding-bottom-15">
-        {/* Start of the alert section */}
+        {/* Start alert section */}
         {alertMessage && (
           <div
             className={`usa-alert usa-alert--${alertType} usa-alert--no-icon`}
@@ -23,7 +82,7 @@ export default function UploadPage({ signOut }: UploadPageProps) {
           </div>
         )}
         {/* End alert section */}
-        {/* Start of the step indicator section */}
+        {/* Start step indicator section */}
         <div
           className="usa-step-indicator usa-step-indicator--counters margin-bottom-6"
           aria-label="Document processing steps"
@@ -56,7 +115,7 @@ export default function UploadPage({ signOut }: UploadPageProps) {
         {/* End step indicator section */}
         <h1 className="font-ui-xl margin-bottom-2">Upload documents</h1>
         <form id="upload-form" onSubmit={handleSubmit}>
-          {/* Start of the card section */}
+          {/* Start card section */}
           <ul className="usa-card-group">
             <li className="usa-card tablet:grid-col-6 widescreen:grid-col-4">
               <div className="usa-card__container">
@@ -66,7 +125,7 @@ export default function UploadPage({ signOut }: UploadPageProps) {
                   </h2>
                 </div>
                 <div className="usa-card__body">
-                  {/* Start of the file input section */}
+                  {/* Start file input section */}
                   <div className="usa-form-group">
                     <span className="usa-hint" id="file-input-specific-hint">
                       Files must be under 4 MB
