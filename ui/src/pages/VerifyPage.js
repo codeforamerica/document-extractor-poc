@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import { authorizedFetch } from '../utils/api';
 import { useNavigate } from 'react-router';
 import * as pdfjsLib from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.js';
+import 'pdfjs-dist/build/pdf.worker.mjs';
 import '../pdf-viewer.css';
 
 export default function VerifyPage({ signOut }) {
