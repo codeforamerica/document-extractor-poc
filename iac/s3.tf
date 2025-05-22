@@ -73,37 +73,38 @@ resource "aws_s3_object" "website_files" {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "allow_website_public" {
+# Updated Public Access Block: keep public blocked except allow CloudFront
+resource "aws_s3_bucket_public_access_block" "private_website" {
   bucket = aws_s3_bucket.website_storage.id
 
-  block_public_acls       = true
-  block_public_policy     = false
-  ignore_public_acls      = true
-  restrict_public_buckets = false
+  block_public_acls   = true
+  ignore_public_acls  = true
+  block_public_policy = true   # stays ON
+  restrict_public_buckets = false  # must be false to allow service principal
 }
 
-resource "aws_s3_bucket_policy" "attach_cloudfront_read" {
-  bucket = aws_s3_bucket.website_storage.bucket
-  policy = data.aws_iam_policy_document.cloudfront_read.json
-
-  depends_on = [aws_s3_bucket_public_access_block.allow_website_public]
+resource "aws_s3_bucket_policy" "website_read" {
+  bucket = aws_s3_bucket.website_storage.id
+  policy = data.aws_iam_policy_document.cf_read.json
 }
 
-data "aws_iam_policy_document" "cloudfront_read" {
+data "aws_iam_policy_document" "cf_read" {
   statement {
-    sid    = "CloudFrontReadGetObject"
-    effect = "Allow"
+    sid     = "AllowCloudFront"
+    effect  = "Allow"
+
     principals {
-      identifiers = ["*"]
-      type        = "AWS"
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
     }
-    actions = [
-      "s3:GetObject",
-      "s3:ListBucket"
-    ]
-    resources = [
-      "${aws_s3_bucket.website_storage.arn}/*",
-      aws_s3_bucket.website_storage.arn
-    ]
+
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.website_storage.arn}/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.distribution.arn]
+    }
   }
 }

@@ -4,23 +4,32 @@ locals {
   api_prefix_path       = "api"
 }
 
+# 1. Origin Access Control for CloudFront -> S3
+resource "aws_cloudfront_origin_access_control" "oac" {
+  name                             = "${local.project}-${var.environment}-oac"
+  description                      = "SigV4 control for private S3 website bucket"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                 = "always"
+  signing_protocol                 = "sigv4"
+}
+
 resource "aws_cloudfront_distribution" "distribution" {
   enabled = true
   comment = "${local.project} ${var.environment} website"
 
-  http_version    = "http2"
-  is_ipv6_enabled = true
-  price_class     = "PriceClass_100"
+  http_version          = "http2"
+  is_ipv6_enabled       = true
+  price_class           = "PriceClass_100"
+  default_root_object   = "index.html"
 
   origin {
-    domain_name = aws_s3_bucket_website_configuration.website_configuration.website_endpoint
+    domain_name = aws_s3_bucket.website_storage.bucket_regional_domain_name
     origin_id   = local.s3_origin_id
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+    origin_access_control_id = aws_cloudfront_origin_access_control.oac.id
+
+    s3_origin_config {
+      origin_access_identity = null
     }
   }
 
