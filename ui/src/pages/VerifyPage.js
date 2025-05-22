@@ -3,10 +3,12 @@ import Layout from '../components/Layout';
 import { authorizedFetch } from '../utils/api';
 import { useNavigate } from 'react-router';
 import * as pdfjsLib from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.mjs';
 import '../pdf-viewer.css';
 
 export default function VerifyPage({ signOut }) {
+  // Set up PDF.js to use the built-in worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+  
   const [documentId] = useState(() => sessionStorage.getItem('documentId'));
   const [responseData, setResponseData] = useState(null); // API response
   const [loading, setLoading] = useState(true); // tracks if page is loading
