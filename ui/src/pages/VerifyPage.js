@@ -228,7 +228,7 @@ export default function VerifyPage({ signOut }) {
                   top: `${activeBoundingBox.Top * 100}%`,
                   width: `${activeBoundingBox.Width * 100}%`,
                   height: `${activeBoundingBox.Height * 100}%`,
-                  border: '2px solid #0050d8',
+                  border: '1px dotted #0050d8',
                   backgroundColor: 'rgba(0, 80, 216, 0.1)',
                   pointerEvents: 'none',
                   zIndex: 10,
