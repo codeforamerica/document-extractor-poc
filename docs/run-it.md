@@ -70,16 +70,14 @@ environment = "dev"  # Use a simple name like "dev", "test", or "prod"
 # Optional: Change AWS region if needed (defaults to "us-east-1" if not specified)
 region = "us-east-1"
 
-# Advanced: Only needed if using custom form adapter configurations
-# textract_form_adapters_env_var_mapping = {
-#   # You probably don't need to set this for your first deployment
-# }
+# Advanced: Required, but can be empty if not using custom form adapters
+textract_form_adapters_env_var_mapping = {}
 ```
 
 > **What these variables do**:
 > - `environment`: Adds a suffix to resource names to separate different deployments (e.g., dev vs. prod)
 > - `region`: Which AWS region to deploy to (us-east-1 is AWS's N. Virginia region)
-> - The form adapter mapping is for advanced use cases and can be left commented out for now
+> - `textract_form_adapters_env_var_mapping`: Required variable for form adapter configurations. Can be set to an empty map (`{}`) if you're not using custom form adapters.
 
 ## 4. Build the Backend
 
@@ -134,7 +132,7 @@ region = "us-east-1"
 
 3. See what Terraform will create (this doesn't make any changes yet):
    ```bash
-   terraform plan -out=tfplan
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 terraform  plan -out=tfplan
    ```
    > This step will show you all the AWS resources that will be created. It might look overwhelming, but you don't need to understand every detail.
 
