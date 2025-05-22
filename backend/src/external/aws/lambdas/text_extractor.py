@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 
@@ -11,6 +10,7 @@ from src import context
 from src.documents import extract_text
 from src.external.aws.s3 import S3
 from src.external.aws.textract import Textract
+from src.logging_config import setup_logger
 from src.ocr import Ocr, OcrException
 from src.storage import CloudStorage
 
@@ -18,6 +18,8 @@ appContext = context.ApplicationContext()
 appContext.register(Ocr, Textract())
 appContext.register(CloudStorage, S3())
 appContext.register(SQSClient, boto3.client("sqs"))
+
+setup_logger()
 
 sqs_queue_url = os.environ["SQS_QUEUE_URL"]
 
@@ -36,28 +38,16 @@ def lambda_handler(event: events.S3Event, context: lambda_context.Context):
         exception_message = f"Failed to find the file {s3_url}"
         logging.error(exception_message)
         logging.exception(e)
-        return {
-            "statusCode": 500,
-            "body": json.dumps(exception_message),
-        }
+        raise
     except OcrException as e:
         exception_message = f"Failed OCR of {s3_url}"
         logging.error(exception_message)
         logging.exception(e)
-        return {
-            "statusCode": 500,
-            "body": json.dumps(exception_message),
-        }
+        raise
     except Exception as e:
         exception_message = "Failed to send message to queue"
         logging.error(exception_message)
         logging.exception(e)
-        return {
-            "statusCode": 500,
-            "body": json.dumps(exception_message),
-        }
+        raise
 
-    return {
-        "statusCode": 200,
-        "body": json.dumps("Document processed successfully and sent to SQS"),
-    }
+    logging.info("Document processed successfully and sent to SQS")

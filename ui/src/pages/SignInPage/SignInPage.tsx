@@ -1,66 +1,24 @@
-import { useState } from 'react';
+import Layout from '../../components/Layout';
+import { useSignInPage } from './useSignInPage.ts';
 
-import Layout from '../components/Layout';
-import { useNavigate } from 'react-router';
+interface SignInPageProps {
+  setAuthToken: (token: string) => void;
+  justSignedOut: boolean;
+}
 
-export default function SignInPage({ setAuthToken, justSignedOut }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [usernameError, setUsernameError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [formError, setFormError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const navigate = useNavigate();
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    // clear previous error messages:
-    setUsernameError('');
-    setPasswordError('');
-    setFormError('');
-    setLoading(true);
-
-    let hasError = false;
-
-    if (!username) {
-      setUsernameError('Please enter your username');
-      hasError = true;
-    }
-
-    if (!password) {
-      setPasswordError('Please enter your password');
-      hasError = true;
-    }
-
-    if (hasError) {
-      setLoading(false); // hide spinner if validation failed
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!res.ok) {
-        throw new Error('The email or password you’ve entered is wrong.');
-      }
-
-      const data = await res.json();
-
-      // store the token
-      setAuthToken(data.access_token);
-      // redirect to upload page
-      navigate('/upload-document');
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
-      setLoading(false); // remove spinner in all cases after request finishes
-    }
-  }
+export default function SignInPage({
+  setAuthToken,
+  justSignedOut,
+}: SignInPageProps) {
+  const {
+    loading,
+    formError,
+    usernameError,
+    passwordError,
+    handleUsernameChange,
+    handlePasswordChange,
+    handleLogin,
+  } = useSignInPage(setAuthToken);
 
   return (
     <Layout>
@@ -108,8 +66,7 @@ export default function SignInPage({ setAuthToken, justSignedOut }) {
                 className="usa-input usa-input--big"
                 id="username"
                 name="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={handleUsernameChange}
               />
             </div>
 
@@ -127,7 +84,7 @@ export default function SignInPage({ setAuthToken, justSignedOut }) {
                 id="password"
                 name="password"
                 type="password"
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
               />
             </div>
             <button
