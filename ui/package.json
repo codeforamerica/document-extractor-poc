@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html",
+    "build": "parcel build src/index.html && cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs dist/",
     "lint": "eslint . --ext .js",
     "format": "prettier --write .",
     "validate": "npm run lint && npm run format",
