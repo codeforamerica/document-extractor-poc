@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import { authorizedFetch } from '../utils/api';
 import { useNavigate } from 'react-router';
@@ -8,6 +8,8 @@ export default function VerifyPage({ signOut }) {
   const [responseData, setResponseData] = useState(null); // API response
   const [loading, setLoading] = useState(true); // tracks if page is loading
   const [error, setError] = useState(false); // tracks when there is an error
+  const [activeBoundingBox, setActiveBoundingBox] = useState(null); // tracks the currently focused field's bounding box
+  const previewContainerRef = useRef(null);
 
   const navigate = useNavigate();
 
@@ -114,6 +116,16 @@ export default function VerifyPage({ signOut }) {
     }));
   }
 
+  function handleInputFocus(field) {
+    if (field.boundingBox) {
+      setActiveBoundingBox(field.boundingBox);
+    }
+  }
+
+  function handleInputBlur() {
+    setActiveBoundingBox(null);
+  }
+
   function shouldUseTextarea(value) {
     if (typeof value !== 'string') return false;
     return value.includes('\n');
@@ -147,6 +159,8 @@ export default function VerifyPage({ signOut }) {
                 rows={2}
                 value={field.value || ''}
                 onChange={(event) => handleInputChange(event, key, field)}
+                onFocus={() => handleInputFocus(field)}
+                onBlur={handleInputBlur}
               />
             ) : (
               <input
@@ -155,6 +169,8 @@ export default function VerifyPage({ signOut }) {
                 name={`field-${key}`}
                 value={field.value || ''}
                 onChange={(event) => handleInputChange(event, key, field)}
+                onFocus={() => handleInputFocus(field)}
+                onBlur={handleInputBlur}
               />
             )}
           </div>
@@ -176,20 +192,49 @@ export default function VerifyPage({ signOut }) {
     const base64Src = `data:${mimeType};base64,${responseData.base64_encoded_file}`;
 
     return (
-      <div id="file-display-container">
+      <div id="file-display-container" ref={previewContainerRef} className="position-relative">
         {fileExtension === 'pdf' ? (
-          <iframe
-            src={base64Src}
-            width="100%"
-            height="600px"
-            title="Document Preview"
-          ></iframe>
+          <>
+            <iframe
+              src={base64Src}
+              width="100%"
+              height="600px"
+              title="Document Preview"
+            ></iframe>
+            {activeBoundingBox && fileExtension === 'pdf' && (
+              <div className="usa-alert usa-alert--info usa-alert--slim">
+                <div className="usa-alert__body">
+                  <p className="usa-alert__text">
+                    Bounding box highlighting is currently only available for image files, not PDF documents.
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
-          <img
-            src={base64Src}
-            alt="Uploaded Document"
-            style={{ maxWidth: '100%', height: 'auto' }}
-          />
+          <div className="position-relative">
+            <img
+              src={base64Src}
+              alt="Uploaded Document"
+              style={{ maxWidth: '100%', height: 'auto' }}
+            />
+            {activeBoundingBox && (
+              <div
+                className="bounding-box-highlight"
+                style={{
+                  position: 'absolute',
+                  left: `${activeBoundingBox.Left * 100}%`,
+                  top: `${activeBoundingBox.Top * 100}%`,
+                  width: `${activeBoundingBox.Width * 100}%`,
+                  height: `${activeBoundingBox.Height * 100}%`,
+                  border: '2px solid #0050d8',
+                  backgroundColor: 'rgba(0, 80, 216, 0.1)',
+                  pointerEvents: 'none',
+                  zIndex: 10,
+                }}
+              ></div>
+            )}
+          </div>
         )}
       </div>
     );
@@ -274,7 +319,6 @@ export default function VerifyPage({ signOut }) {
                 <li className="usa-card width-full">
                   <div className="usa-card__container file-preview-col">
                     <div className="usa-card__body">
-                      <div id="file-display-container"></div>
                       <div>{displayFilePreview()}</div>
                       <p>{displayFileName()}</p>
                     </div>

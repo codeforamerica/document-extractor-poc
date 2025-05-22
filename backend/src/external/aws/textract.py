@@ -149,8 +149,22 @@ class Textract(Ocr):
             value, confidence = Textract._get_text_and_confidence_from_relationship_blocks(
                 query_block, query_result_blocks, "ANSWER"
             )
+            
+            # Extract bounding box information
+            bounding_box = None
+            related_ids = next((rel["Ids"] for rel in query_block.get("Relationships", []) 
+                              if rel["Type"] == "ANSWER"), [])
+            
+            if related_ids and related_ids[0] in query_result_blocks:
+                result_block = query_result_blocks[related_ids[0]]
+                if "Geometry" in result_block and "BoundingBox" in result_block["Geometry"]:
+                    bounding_box = result_block["Geometry"]["BoundingBox"]
 
-            extracted_data[query_block["Query"]["Text"]] = {"value": value, "confidence": confidence}
+            extracted_data[query_block["Query"]["Text"]] = {
+                "value": value, 
+                "confidence": confidence,
+                "boundingBox": bounding_box
+            }
 
         return extracted_data
 
@@ -172,6 +186,7 @@ class Textract(Ocr):
 
             value_texts = []
             value_confidences = []
+            value_bounding_box = None
 
             for relationship in relationships:
                 if relationship["Type"] != "VALUE":
@@ -186,11 +201,21 @@ class Textract(Ocr):
                     if value_text != "":
                         value_texts.append(value_text)
                         value_confidences.append(value_confidence)
+                        
+                        # Store the bounding box of the VALUE block
+                        # We only keep the first meaningful value's bounding box for simplicity
+                        if value_bounding_box is None and "Geometry" in value_block and "BoundingBox" in value_block["Geometry"]:
+                            value_bounding_box = value_block["Geometry"]["BoundingBox"]
 
             confidence = -1
             if len(value_texts) > 0:
                 confidence = statistics.fmean(value_confidences)
-            extracted_data[key_text] = {"value": " ".join(value_texts), "confidence": confidence}
+                
+            extracted_data[key_text] = {
+                "value": " ".join(value_texts), 
+                "confidence": confidence,
+                "boundingBox": value_bounding_box
+            }
 
         return extracted_data
 
