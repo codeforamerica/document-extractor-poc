@@ -223,6 +223,7 @@ export default function VerifyPage({ signOut }) {
                 className="bounding-box-highlight"
                 style={{
                   position: 'absolute',
+                  marginTop: "-4px",
                   left: `${activeBoundingBox.Left * 100}%`,
                   top: `${activeBoundingBox.Top * 100}%`,
                   width: `${activeBoundingBox.Width * 100}%`,
