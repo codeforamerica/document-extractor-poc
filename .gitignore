@@ -194,3 +194,11 @@ node_modules/
 #Parcel
 .parcel-cache/
 iac/tfplan
+
+
+password.txt
+private-key.pem
+private-key.txt
+public-key.pem
+public-key.txt
+username.txt

@@ -157,7 +157,7 @@ textract_form_adapters_env_var_mapping = {}
 
 2. Upload it to AWS Secrets Manager with `private-key` in the name:
    ```bash
-   aws secretsmanager create-secret --name private-key --secret-string file://private-key.pem
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name private-key --secret-string file://private-key.pem
    ```
 
 3. Generate a public key from the private key:
@@ -167,12 +167,12 @@ textract_form_adapters_env_var_mapping = {}
 
 4. Upload the public key to AWS Secrets Manager:
    ```bash
-   aws secretsmanager create-secret --name public-key --secret-string file://public-key.pem
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name public-key --secret-string file://public-key.pem
    ```
 
 5. Choose a username and upload it to Secrets Manager:
    ```bash
-   aws secretsmanager create-secret --name username --secret-string "your_chosen_username"
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name username --secret-string "hugo-testing-testing"
    ```
 
 6. Generate a hashed password:
@@ -183,8 +183,17 @@ textract_form_adapters_env_var_mapping = {}
 
 7. Upload the hashed password to Secrets Manager:
    ```bash
-   aws secretsmanager create-secret --name password --secret-string "hashed_password_from_previous_step"
+   AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name password --secret-string "$2b$12$rumyUnUwF9NvnWaCkHRDYOeQCyn22QP6LgbR4GEEGkHsr3urD9Bau"
    ```
+
+# correct commands code expects:
+AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name document-extractor-dev-username --secret-string "hugo-testing-testing"
+
+AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name document-extractor-dev-password --secret-string "$2b$12$rumyUnUwF9NvnWaCkHRDYOeQCyn22QP6LgbR4GEEGkHsr3urD9Bau"
+
+AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name document-extractor-dev-private-key --secret-string file://private-key.pem
+
+AWS_PROFILE=AWSAdministratorAccess-328307993388 aws secretsmanager create-secret --name document-extractor-dev-public-key --secret-string file://public-key.pem
 
 ## 8. Additional Post-Deployment Steps
 

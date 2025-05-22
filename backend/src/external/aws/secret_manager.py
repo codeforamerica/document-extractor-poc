@@ -7,7 +7,7 @@ from src.secret.exception import CloudSecretManagerException
 
 class SecretManager(CloudSecretManager):
     def __init__(self) -> None:
-        self.client: SecretsManagerClient = boto3.client("secretsmanager")
+        self.client: SecretsManagerClient = boto3.client("secretsmanager", region_name="us-west-1")
 
     def get_secret(self, secret_id: str) -> str:
         try:
