@@ -19,8 +19,11 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    region       = "us-east-1"
-    use_lockfile = true
+    bucket         = "document-extractor-dev-terraform-state"
+    key            = "document-extractor/terraform.tfstate"
+    region         = "us-west-1"
+    dynamodb_table = "terraform-locks-dev"
+    encrypt        = true
   }
 }
 
