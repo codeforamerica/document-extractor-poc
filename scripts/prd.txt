@@ -1,0 +1,175 @@
+<context>
+# Overview
+This project implements comprehensive AWS infrastructure compliance based on the AWS Configuration Baseline Policy. The goal is to transform an existing non-compliant infrastructure (document extractor POC) into a secure, compliant AWS environment that meets organizational security and compliance requirements. The project addresses critical security gaps including missing VPC infrastructure, inadequate encryption, insufficient logging, and overly permissive IAM policies.
+
+# Core Features
+The compliance implementation includes these essential security and operational features:
+
+**VPC Infrastructure Foundation**
+- Complete network architecture with public/private subnet separation across multiple AZs
+- Proper security groups, route tables, and VPC endpoints for secure AWS service communication
+- NAT gateways for private subnet internet access and VPC Flow Logs for monitoring
+
+**Security & Encryption**
+- Customer-managed KMS keys (CMK) for all encryption needs with proper key policies and aliases
+- S3 bucket encryption, versioning, object locking, and SSL enforcement policies
+- Secrets Manager with automatic rotation and CMK encryption
+
+**Identity & Access Management**
+- Least privilege IAM policies replacing overly broad permissions (dynamodb:*, s3:*, etc.)
+- Proper IAM user management with 90-day access key rotation
+- Service account best practices and console access restrictions
+
+**Monitoring & Logging**
+- CloudWatch log groups with 30-day retention and CMK encryption for all services
+- API Gateway access logging and execution logging with X-Ray tracing
+- CloudFront access logs and Datadog integration for log aggregation
+
+**Database & Storage Security**
+- DynamoDB point-in-time recovery, backups, and CMK encryption
+- S3 cross-region replication, access logging, and lifecycle policies
+- Dead Letter Queues for Lambda and SQS error handling
+
+# User Experience
+**Primary Users:**
+- Infrastructure engineers implementing compliance requirements
+- DevOps teams maintaining secure AWS environments
+- Security teams auditing and monitoring compliance posture
+
+**Key User Flows:**
+- Deploy foundational VPC infrastructure before any other resources
+- Migrate existing Lambda functions from default VPC to private subnets
+- Implement monitoring and alerting for compliance drift detection
+- Execute regular security audits using AWS Security Hub and Inspector
+
+**Operational Considerations:**
+- Zero-downtime migration approach where possible
+- Comprehensive testing strategy for each compliance component
+- Documentation and runbooks for ongoing maintenance
+</context>
+<PRD>
+# Technical Architecture
+**Infrastructure as Code Implementation:**
+- Terraform/OpenTofu modules for all AWS resources following Code for America's baseline modules
+- Modular design allowing incremental compliance implementation
+- Environment-specific configurations (production vs non-production)
+
+**Network Architecture:**
+- VPC with CIDR block allocation across 3 availability zones
+- Public subnets (load balancers, NAT gateways) and private subnets (compute resources)
+- VPC endpoints for ec2, ec2messages, ecr.api, ecr.dkr, guardduty-data, s3, ssm, ssm-contacts, ssm-incidents, ssmmessages
+- Custom security groups with least privilege access patterns
+
+**Encryption & Key Management:**
+- Customer-managed KMS keys with descriptive aliases and custom policies
+- All services (S3, DynamoDB, Lambda, CloudWatch, Secrets Manager) using CMK encryption
+- Automatic key rotation enabled with proper IAM permissions
+
+**Monitoring & Compliance Stack:**
+- CloudWatch log groups with standardized naming and retention policies
+- Datadog forwarder deployment for log aggregation
+- AWS Security Hub for continuous compliance monitoring
+- Cost anomaly detection and monitoring setup
+
+# Development Roadmap
+**Phase 1: Foundation Infrastructure (Critical)**
+- Create VPC with public/private subnet architecture across multiple AZs
+- Deploy Internet Gateway, NAT Gateways, and route tables
+- Configure VPC Flow Logs with CloudWatch integration
+- Set up customer-managed KMS key with proper policies and aliases
+- Create VPC endpoints for essential AWS services
+
+**Phase 2: Network Security & Access Control**
+- Create custom security groups with least privilege rules
+- Disable default security group (deny all traffic)
+- Implement proper IAM policies with specific resource access
+- Configure IAM user management and access key rotation processes
+- Deploy security groups for Lambda, API Gateway, and other services
+
+**Phase 3: Service Migration & Security**
+- Migrate Lambda functions to private subnets with VPC configuration
+- Configure Dead Letter Queues for Lambda functions and SQS
+- Implement CloudWatch log groups with CMK encryption and retention
+- Set appropriate Lambda reserved concurrency limits
+- Enable API Gateway logging and X-Ray tracing
+
+**Phase 4: Storage & Database Security**
+- Add S3 bucket CMK encryption and versioning to all buckets
+- Configure S3 object locking and SSL enforcement policies
+- Set up S3 access logging and cross-region replication
+- Enable DynamoDB point-in-time recovery and backup configuration
+- Configure Secrets Manager automatic rotation and CMK encryption
+
+**Phase 5: Monitoring & Compliance Tools**
+- Deploy Datadog forwarder to all regions
+- Configure CloudFront access logging and security headers
+- Enable AWS Security Hub and Inspector (when applicable)
+- Set up Cost Explorer monitoring and anomaly detection
+- Request Amazon Macie enablement for sensitive data detection
+
+**Phase 6: Final Compliance & Documentation**
+- Implement lifecycle policies for all S3 buckets
+- Configure backup vault for long-term DynamoDB retention
+- Set up quarterly backup restore testing procedures
+- Create compliance documentation and exception tracking
+- Deploy static analysis tools (trivy) for ongoing IaC scanning
+
+# Logical Dependency Chain
+**Critical Path Dependencies:**
+1. **VPC Infrastructure First**: All other resources depend on proper network foundation
+2. **KMS Key Setup**: Required before configuring encryption for any service
+3. **Security Groups**: Must exist before deploying resources to private subnets
+4. **Lambda VPC Migration**: Requires VPC, subnets, and security groups to be ready
+5. **Logging Infrastructure**: CloudWatch log groups needed before enabling service logging
+6. **Monitoring Setup**: Datadog forwarder deployment enables comprehensive log aggregation
+
+**Implementation Order:**
+- Start with VPC, subnets, gateways, and routing (cannot proceed without network foundation)
+- Immediately follow with KMS key setup for encryption capabilities
+- Deploy security groups and IAM policies in parallel
+- Migrate services to VPC and enable encryption simultaneously
+- Add monitoring and logging as each service is migrated
+- Final compliance tooling and documentation once core infrastructure is secure
+
+**Atomic Feature Boundaries:**
+- Each AWS service compliance (S3, Lambda, DynamoDB) can be implemented independently after foundation
+- Monitoring components can be added incrementally
+- Backup and disaster recovery features are additive enhancements
+
+# Risks and Mitigations
+**Critical Risks:**
+- **Service Downtime During Migration**: Mitigation includes blue-green deployment strategy and careful VPC migration planning
+- **Lambda Cold Starts in VPC**: Accept performance trade-off for security, consider provisioned concurrency
+- **Cost Increases**: NAT gateways and VPC endpoints add costs, budget accordingly for compliance requirements
+
+**Technical Challenges:**
+- **Existing Resource Dependencies**: Current Lambda functions may have hard-coded assumptions about default VPC
+- **IAM Permission Scope**: Reducing from wildcard permissions requires thorough testing of application functionality
+- **Cross-Region Replication Setup**: Requires coordination with backup and disaster recovery planning
+
+**Compliance Risks:**
+- **Partial Implementation**: Must ensure complete compliance implementation, not just partial fixes
+- **Configuration Drift**: Need ongoing monitoring to prevent manual changes that break compliance
+- **Documentation Gaps**: Proper documentation essential for audit and ongoing maintenance
+
+# Appendix
+**AWS Configuration Baseline Policy Requirements:**
+- Reference to original baseline document for detailed compliance specifications
+- Mapping of each requirement to specific implementation tasks
+- Exception handling process for any baseline deviations
+
+**Current Infrastructure Analysis:**
+- Complete audit findings showing specific non-compliance areas
+- Resource inventory and current configuration documentation
+- Migration impact analysis for each service component
+
+**Code for America OpenTofu Modules:**
+- Recommended modules: aws-vpc, aws-logging, aws-serverless-database
+- Module customization requirements for specific use cases
+- Integration patterns with existing infrastructure
+
+**Compliance Verification:**
+- Testing procedures for each compliance requirement
+- Automated compliance checking with tools like trivy
+- Quarterly compliance review and audit procedures
+</PRD>

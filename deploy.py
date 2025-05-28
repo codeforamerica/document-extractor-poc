@@ -15,20 +15,21 @@ UI_DIR = ROOT_DIR / 'ui'
 IAC_DIR = ROOT_DIR / 'iac'
 
 # AWS Profile from memory
-AWS_PROFILE = 'AWSAdministratorAccess-328307993388'
+# AWS_PROFILE = 'AWSAdministratorAccess-328307993388'
+AWS_PROFILE = 'default'
 
 # AWS Region from memory
-AWS_REGION = 'us-west-1'
+AWS_REGION = 'us-east-1'
 
 def run_command(cmd, cwd=None, env=None, check=True):
     """Run a shell command and return the result."""
     print(f"Running: {' '.join(cmd)}")
-    
+
     # Merge the current environment with any additional environment variables
     command_env = os.environ.copy()
     if env:
         command_env.update(env)
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -61,7 +62,7 @@ def build_frontend():
     # Make sure node_modules exists
     if not (UI_DIR / 'node_modules').exists():
         run_command(['npm', 'install'], cwd=UI_DIR)
-    
+
     # Build the frontend
     run_command(['npm', 'run', 'build'], cwd=UI_DIR)
     print("Frontend build completed successfully!")
@@ -113,7 +114,7 @@ def main():
 
     # Terraform steps
     terraform_init()
-    
+
     if args.plan_only:
         terraform_plan()
         print("\nTerraform plan completed. Run without --plan-only to apply the changes.")
