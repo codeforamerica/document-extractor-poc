@@ -8,7 +8,8 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region  = var.region
+  profile = "AWSAdministratorAccess-328307993388"
 
   default_tags {
     tags = {
@@ -24,6 +25,7 @@ terraform {
     region         = "us-west-1"
     dynamodb_table = "terraform-locks-dev"
     encrypt        = true
+    profile        = "AWSAdministratorAccess-328307993388"
   }
 }
 

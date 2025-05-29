@@ -15,11 +15,36 @@ UI_DIR = ROOT_DIR / 'ui'
 IAC_DIR = ROOT_DIR / 'iac'
 
 # AWS Profile from memory
-# AWS_PROFILE = 'AWSAdministratorAccess-328307993388'
-AWS_PROFILE = 'default'
+# AWS_PROFILE = 'default'
+AWS_PROFILE = 'AWSAdministratorAccess-328307993388'
 
 # AWS Region from memory
-AWS_REGION = 'us-east-1'
+AWS_REGION = 'us-west-1'
+
+def get_sso_credentials():
+    """Get SSO credentials and return as environment variables."""
+    print("=== Getting SSO Credentials ===")
+    try:
+        result = subprocess.run(
+            ['aws', 'configure', 'export-credentials', '--profile', AWS_PROFILE, '--format', 'env'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+
+        # Parse the export commands
+        credentials = {}
+        for line in result.stdout.strip().split('\n'):
+            if line.startswith('export '):
+                key_value = line.replace('export ', '')
+                key, value = key_value.split('=', 1)
+                credentials[key] = value
+
+        return credentials
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to get SSO credentials: {e}")
+        print("Please run: aws sso login --profile AWSAdministratorAccess-328307993388")
+        sys.exit(1)
 
 def run_command(cmd, cwd=None, env=None, check=True):
     """Run a shell command and return the result."""
@@ -70,27 +95,36 @@ def build_frontend():
 def terraform_init():
     """Initialize Terraform."""
     print("=== Initializing Terraform ===")
+    # Get SSO credentials
+    sso_credentials = get_sso_credentials()
     env = {
         'AWS_PROFILE': AWS_PROFILE,
-        'AWS_REGION': AWS_REGION
+        'AWS_REGION': AWS_REGION,
+        **sso_credentials  # Include SSO credentials
     }
     run_command(['terraform', 'init'], cwd=IAC_DIR, env=env)
 
 def terraform_plan():
     """Run Terraform plan."""
     print("=== Running Terraform Plan ===")
+    # Get SSO credentials
+    sso_credentials = get_sso_credentials()
     env = {
         'AWS_PROFILE': AWS_PROFILE,
-        'AWS_REGION': AWS_REGION
+        'AWS_REGION': AWS_REGION,
+        **sso_credentials  # Include SSO credentials
     }
     run_command(['terraform', 'plan'], cwd=IAC_DIR, env=env)
 
 def terraform_apply():
     """Apply Terraform changes."""
     print("=== Applying Terraform Changes ===")
+    # Get SSO credentials
+    sso_credentials = get_sso_credentials()
     env = {
         'AWS_PROFILE': AWS_PROFILE,
-        'AWS_REGION': AWS_REGION
+        'AWS_REGION': AWS_REGION,
+        **sso_credentials  # Include SSO credentials
     }
     run_command(['terraform', 'apply', '-auto-approve'], cwd=IAC_DIR, env=env)
 
