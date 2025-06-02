@@ -108,3 +108,52 @@ If you need to tear down the infrastructure deployed by OpenTofu:
     OpenTofu will prompt for confirmation before proceeding. Type `yes` to approve.
 
 This should guide you through deploying and managing your infrastructure with OpenTofu!
+
+## Troubleshooting
+
+### Secrets Manager: "secret with this name is already scheduled for deletion"
+
+If your `tofu apply` command fails with an error similar to:
+
+```
+Error: creating Secrets Manager Secret (example-secret-name): ... InvalidRequestException: You can't create this secret because a secret with this name is already scheduled for deletion.
+```
+
+This means that secrets with the same names as those defined in your `secrets.tf` (e.g., `document-extractor-dev-private-key`, `document-extractor-dev-public-key`, etc.) were recently deleted and are currently in a recovery window (typically 7-30 days). AWS Secrets Manager prevents the creation of a new secret with the same name during this period.
+
+You have a few options to resolve this:
+
+**Option 1: Wait for the Recovery Window to Expire**
+
+*   The simplest option is to wait until the recovery window for the deleted secrets has passed. After this period, the secret names will become available again, and `tofu apply` should succeed.
+
+**Option 2: Force Delete the Secrets (Use with Caution)**
+
+*   If you are certain you do not need to recover the old secret values, you can force delete them from AWS Secrets Manager. This will make the names available immediately.
+    *   **Using AWS Management Console**:
+        1.  Navigate to AWS Secrets Manager in the AWS console.
+        2.  Find the secrets that are scheduled for deletion (they might have a status indicating this).
+        3.  Select the secret and look for an option to permanently delete it or modify the deletion schedule to delete it immediately. The exact steps might vary slightly depending on the console interface.
+    *   **Using AWS CLI**:
+        You can use the `aws secretsmanager delete-secret` command with the `--force-delete-without-recovery` flag. You'll first need to find the Secret ARN or name.
+        ```bash
+        # Example for one secret (repeat for all problematic secrets):
+        aws secretsmanager delete-secret --secret-id arn:aws:secretsmanager:us-west-1:328307993388:secret:document-extractor-dev-private-key-XXXXXX --force-delete-without-recovery --region us-west-1 --profile AWSAdministratorAccess-328307993388
+        # Or by name (if it's unique and you're sure it's the correct one scheduled for deletion)
+        # aws secretsmanager delete-secret --secret-id document-extractor-dev-private-key --force-delete-without-recovery --region us-west-1 --profile AWSAdministratorAccess-328307993388
+        ```
+        **Important**: Replace `us-west-1` with your actual region if different, and `AWSAdministratorAccess-328307993388` with your AWS CLI profile. The `-XXXXXX` part of the ARN is a placeholder for the unique suffix AWS adds to secret ARNs; you'd typically use the full name if it's in a scheduled deletion state without the suffix, or find the exact ARN.
+
+**Option 3: Change Secret Names in Configuration**
+
+*   If you want to proceed immediately without waiting or force-deleting, you can modify your `iac/secrets.tf` file to use different names for the secrets. For example, append a suffix:
+    ```terraform
+    resource "aws_secretsmanager_secret" "private_key" {
+      name = "document-extractor-dev-private-key-v2"
+      # ... other attributes
+    }
+    // Repeat for other secrets
+    ```
+    After changing the names, run `tofu plan -out=tfplan` and `tofu apply tfplan` again.
+
+Choose the option that best suits your needs. After resolving the secret name conflict, you should be able to successfully apply your OpenTofu configuration.
