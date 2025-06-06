@@ -53,7 +53,7 @@ jobs:
           path: ui/dist/
 
       - working-directory: ./iac/
-        run: terraform init -backend-config="bucket=document-extractor-${{ vars.ENVIRONMENT }}-terraform-state" -backend-config="key=terraform_state_${{ vars.ENVIRONMENT }}.tfstate"
+        run: terraform init -backend-config="bucket=document-extractor-${{ vars.ENVIRONMENT }}-opentofu-state" -backend-config="key=terraform_state_${{ vars.ENVIRONMENT }}.tfstate"
 
       - working-directory: ./iac/
         run: terraform apply -auto-approve -var 'environment=${{ vars.ENVIRONMENT }}' -var 'textract_form_adapters_env_var_mapping=${{ secrets.TEXTRACT_FORM_ADAPTERS_ENV_VARS_MAPPING }}'

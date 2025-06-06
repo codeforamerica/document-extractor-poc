@@ -18,7 +18,7 @@ We will use the existing S3 backend configuration to store the OpenTofu state.
     *   The backend configuration in `iac/main.tf` specifies `profile = "AWSAdministratorAccess-328307993388"`. Make sure this AWS profile is configured in your `~/.aws/credentials` and `~/.aws/config` files.
 
 3.  **S3 Bucket for State**:
-    *   You mentioned an existing S3 bucket: `document-extractor-dev-terraform-state`. OpenTofu will use this bucket to store its state file.
+    *   You mentioned an existing S3 bucket: `document-extractor-dev-opentofu-state`. OpenTofu will use this bucket to store its state file.
 
 4.  **DynamoDB Table for Locks**:
     *   The backend configuration specifies `dynamodb_table = "terraform-locks-dev"`.
@@ -41,7 +41,7 @@ We will use the existing S3 backend configuration to store the OpenTofu state.
     If `tofu init` has trouble finding or configuring the backend, you can explicitly provide the backend configuration (though it should not be necessary if `main.tf` is correctly configured):
     ```bash
     tofu init \
-        -backend-config="bucket=document-extractor-dev-terraform-state" \
+        -backend-config="bucket=document-extractor-dev-opentofu-state" \
         -backend-config="key=document-extractor/terraform.tfstate" \
         -backend-config="region=us-west-1" \
         -backend-config="dynamodb_table=terraform-locks-dev" \
@@ -65,7 +65,13 @@ We will use the existing S3 backend configuration to store the OpenTofu state.
 5.  **Apply the Configuration**:
     Apply the changes required to reach the desired state of the configuration.
     ```bash
-    tofu apply tfplan
+    tofu apply tfplan \
+        -backend-config="bucket=document-extractor-dev-opentofu-state" \
+        -backend-config="key=document-extractor/terraform.tfstate" \
+        -backend-config="region=us-west-1" \
+        -backend-config="dynamodb_table=terraform-locks-dev" \
+        -backend-config="encrypt=true" \
+        -backend-config="profile=AWSAdministratorAccess-328307993388"
     ```
     OpenTofu will prompt for confirmation before proceeding. Type `yes` to approve.
 
@@ -78,7 +84,7 @@ Your `iac/main.tf` file already contains the S3 backend configuration that OpenT
 ```terraform
 terraform {
   backend "s3" {
-    bucket         = "document-extractor-dev-terraform-state"
+    bucket         = "document-extractor-dev-opentofu-state"
     key            = "document-extractor/terraform.tfstate" # This will be the path to the state file within the bucket
     region         = "us-west-1"
     dynamodb_table = "terraform-locks-dev"
@@ -136,12 +142,20 @@ You have a few options to resolve this:
         3.  Select the secret and look for an option to permanently delete it or modify the deletion schedule to delete it immediately. The exact steps might vary slightly depending on the console interface.
     *   **Using AWS CLI**:
         You can use the `aws secretsmanager delete-secret` command with the `--force-delete-without-recovery` flag. You'll first need to find the Secret ARN or name.
-        ```bash
-        # Example for one secret (repeat for all problematic secrets):
-        aws secretsmanager delete-secret --secret-id arn:aws:secretsmanager:us-west-1:328307993388:secret:document-extractor-dev-private-key-XXXXXX --force-delete-without-recovery --region us-west-1 --profile AWSAdministratorAccess-328307993388
-        # Or by name (if it's unique and you're sure it's the correct one scheduled for deletion)
-        # aws secretsmanager delete-secret --secret-id document-extractor-dev-private-key --force-delete-without-recovery --region us-west-1 --profile AWSAdministratorAccess-328307993388
-        ```
+
+        *   **To list all secrets, including those pending deletion, to find the correct name or ARN:**
+            ```bash
+            aws secretsmanager list-secrets --include-pending-deletion --region us-west-1 --profile AWSAdministratorAccess-328307993388 --output json
+            ```
+            Review the output. Look for secrets with a `DeletionDate` field; these are the ones scheduled for deletion. Note the `Name` or `ARN` of the secrets you intend to manage.
+
+        *   **To force delete a secret:**
+            ```bash
+            # Example for one secret (repeat for all problematic secrets):
+            aws secretsmanager delete-secret --secret-id arn:aws:secretsmanager:us-west-1:328307993388:secret:document-extractor-dev-private-key-XXXXXX --force-delete-without-recovery --region us-west-1 --profile AWSAdministratorAccess-328307993388
+            # Or by name (if it's unique and you're sure it's the correct one scheduled for deletion)
+            # aws secretsmanager delete-secret --secret-id document-extractor-dev-private-key --force-delete-without-recovery --region us-west-1 --profile AWSAdministratorAccess-328307993388
+            ```
         **Important**: Replace `us-west-1` with your actual region if different, and `AWSAdministratorAccess-328307993388` with your AWS CLI profile. The `-XXXXXX` part of the ARN is a placeholder for the unique suffix AWS adds to secret ARNs; you'd typically use the full name if it's in a scheduled deletion state without the suffix, or find the exact ARN.
 
 **Option 3: Change Secret Names in Configuration**

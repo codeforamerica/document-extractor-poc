@@ -37,10 +37,17 @@ resource "aws_cloudfront_distribution" "distribution" {
   enabled = true
   comment = "${local.project} ${var.environment} website"
 
-  http_version          = "http2"
+  http_version          = "http2and3"
   is_ipv6_enabled       = true
   price_class           = "PriceClass_100"
   default_root_object   = "index.html"
+
+  # Access logging configuration
+  logging_config {
+    include_cookies = false
+    bucket          = aws_s3_bucket.access_logs.bucket_domain_name
+    prefix          = "cloudfront-access-logs/"
+  }
 
   origin {
     domain_name = aws_s3_bucket.website_storage.bucket_regional_domain_name
@@ -78,6 +85,12 @@ resource "aws_cloudfront_distribution" "distribution" {
       }
 
       query_string = false
+    }
+
+    # Add security headers
+    function_association {
+      event_type   = "viewer-response"
+      function_arn = aws_cloudfront_function.security_headers.arn
     }
   }
 
@@ -121,6 +134,33 @@ function handler(event) {
 	var request = event.request;
 	request.uri = request.uri.replace(/^\/${local.api_prefix_path}\//, "/");
 	return request;
+}
+EOF
+}
+
+# CloudFront Function for Security Headers
+resource "aws_cloudfront_function" "security_headers" {
+  name    = "${local.project}-${var.environment}-security-headers"
+  runtime = "cloudfront-js-1.0"
+  code    = <<EOF
+function handler(event) {
+    var response = event.response;
+    var headers = response.headers;
+
+    // Security headers
+    headers['strict-transport-security'] = { value: 'max-age=31536000; includeSubDomains; preload' };
+    headers['content-type-options'] = { value: 'nosniff' };
+    headers['x-frame-options'] = { value: 'DENY' };
+    headers['x-content-type-options'] = { value: 'nosniff' };
+    headers['referrer-policy'] = { value: 'strict-origin-when-cross-origin' };
+    headers['permissions-policy'] = { value: 'camera=(), microphone=(), geolocation=()' };
+
+    // Content Security Policy
+    headers['content-security-policy'] = {
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';"
+    };
+
+    return response;
 }
 EOF
 }

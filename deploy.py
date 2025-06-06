@@ -19,7 +19,7 @@ IAC_DIR = ROOT_DIR / 'iac'
 AWS_PROFILE = 'AWSAdministratorAccess-328307993388'
 
 # AWS Region from memory
-AWS_REGION = 'us-west-1'
+AWS_REGION = 'us-east-1'
 
 def get_sso_credentials():
     """Get SSO credentials and return as environment variables."""

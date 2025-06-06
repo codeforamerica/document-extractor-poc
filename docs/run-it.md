@@ -35,7 +35,7 @@ For a fresh deployment, you need to create an S3 bucket to store this state file
 
 1. **Create a state bucket** in your AWS account:
    - Go to the AWS console → S3 → Create bucket
-   - Name it something like `document-extractor-dev-terraform-state`
+   - Name it something like `document-extractor-dev-opentofu-state`
    - Keep default settings and create the bucket
 
 2. **Create a DynamoDB table** for state locking:
@@ -48,7 +48,7 @@ For a fresh deployment, you need to create an S3 bucket to store this state file
    ```hcl
    terraform {
      backend "s3" {
-       bucket         = "document-extractor-dev-terraform-state"  # Replace with your bucket name
+       bucket         = "document-extractor-dev-opentofu-state"  # Replace with your bucket name
        key            = "document-extractor/terraform.tfstate"
        region         = "us-east-1"
        dynamodb_table = "terraform-locks-dev"  # The DynamoDB table you created

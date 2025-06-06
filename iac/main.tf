@@ -20,9 +20,9 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    bucket         = "document-extractor-dev-terraform-state"
+    bucket         = "document-extractor-dev-opentofu-state"
     key            = "document-extractor/terraform.tfstate"
-    region         = "us-west-1"
+    region         = "us-east-1"
     dynamodb_table = "terraform-locks-dev"
     encrypt        = true
     profile        = "AWSAdministratorAccess-328307993388"

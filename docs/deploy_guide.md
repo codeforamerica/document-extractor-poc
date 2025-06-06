@@ -43,24 +43,24 @@ Before running Terraform:
 
 Create an S3 bucket to store the Terraform state:
 ```shell
-aws s3 mb s3://document-extractor-YOUR_ENVIRONMENT-terraform-state
+aws s3 mb s3://document-extractor-YOUR_ENVIRONMENT-opentofu-state
 ```
 
 Replace YOUR_ENVIRONMENT with your environment name (e.g., dev, prod).
 
 ```sh
-aws s3 mb s3://document-extractor-dev-terraform-state
+aws s3 mb s3://document-extractor-dev-opentofu-state
 ```
 
 3. Initialize and Apply Terraform
 
 cd ./iac/
-terraform init -backend-config="bucket=document-extractor-YOUR_ENVIRONMENT-terraform-state" -backend-config="key=terraform_state_YOUR_ENVIRONMENT.tfstate"
+terraform init -backend-config="bucket=document-extractor-YOUR_ENVIRONMENT-opentofu-state" -backend-config="key=terraform_state_YOUR_ENVIRONMENT.tfstate"
 terraform apply -var 'environment=YOUR_ENVIRONMENT'
 
 ```sh
 cd ./iac/
-terraform init -backend-config="bucket=document-extractor-dev-terraform-state" -backend-config="key=terraform_state_dev.tfstate"
+terraform init -backend-config="bucket=document-extractor-dev-opentofu-state" -backend-config="key=terraform_state_dev.tfstate"
 terraform apply -var 'environment=dev'
 ```
 
@@ -120,7 +120,7 @@ I would recommend keeping the text extraction Lambda at 256 MB since it's doing 
 Terraform Init Error
 The error you're seeing is because you included s3:// in the bucket name. Terraform's S3 backend configuration expects just the bucket name without the protocol prefix:
 ```sh
-terraform init -backend-config="bucket=document-extractor-dev-terraform-state" -backend-config="key=terraform_state_dev.tfstate"
+terraform init -backend-config="bucket=document-extractor-dev-opentofu-state" -backend-config="key=terraform_state_dev.tfstate"
 ```
 
 State File Path Prompt

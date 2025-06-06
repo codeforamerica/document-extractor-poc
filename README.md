@@ -104,3 +104,82 @@ pre-commit install
 Most of the time any errors encountered by pre-commit are automatically fixed.  Run `git status` to see the fixed files,
 run `git add .` to add the fixes, and rerun the commit.  You will need to manually fix any errors that are not
 automatically fixed.
+
+## Troubleshooting
+
+### AWS Secrets Manager
+
+If you're experiencing authentication issues or need to verify that your secrets are properly configured in AWS Secrets Manager, you can use the provided script to list all secrets in your account:
+
+```shell
+python scripts/list_aws_secrets.py
+```
+
+**Usage Options:**
+- `--profile <profile_name>`: Use a specific AWS CLI profile
+- `--region <region_name>`: Use a specific AWS region
+
+**Examples:**
+```shell
+# List secrets using default profile and region
+python scripts/list_aws_secrets.py
+
+# List secrets using a specific AWS profile
+python scripts/list_aws_secrets.py --profile my-aws-profile
+
+# List secrets in a specific region
+python scripts/list_aws_secrets.py --region us-east-1
+
+# Use both custom profile and region
+python scripts/list_aws_secrets.py --profile my-aws-profile --region us-west-2
+```
+
+This script will show you all secrets (including those pending deletion) and help you verify that the required authentication secrets are present:
+- A secret with `private-key` in the name (RSA private key in PEM format)
+- A secret with `public-key` in the name (RSA public key in PEM format)
+- A secret with `username` in the name (login username)
+- A secret with `password` in the name (bcrypt hashed password)
+
+The script outputs both a formatted table and detailed JSON for comprehensive debugging.
+
+### Deleting Authentication Secrets
+
+If you need to delete and recreate the authentication secrets, you can use the provided deletion script. **This script forces permanent deletion with no recovery period** and only allows deletion of the four authentication-related secrets for safety:
+
+```shell
+python scripts/delete_aws_secrets.py <secret_name>
+```
+
+**Allowed secret names:**
+- `private-key`
+- `public-key`
+- `username`
+- `password`
+
+**Usage Options:**
+- `--profile <profile_name>`: Use a specific AWS CLI profile
+- `--region <region_name>`: Use a specific AWS region
+- `--no-force`: Use standard 30-day recovery period instead of immediate deletion
+- `--yes`: Skip confirmation prompt (dangerous!)
+
+**Examples:**
+```shell
+# Delete all secrets containing "private-key" (with confirmation)
+python scripts/delete_aws_secrets.py private-key
+
+# Delete using specific profile and region
+python scripts/delete_aws_secrets.py username --profile my-aws-profile --region us-east-1
+
+# Delete without force (30-day recovery period)
+python scripts/delete_aws_secrets.py password --no-force
+
+# Delete without confirmation (use with extreme caution!)
+python scripts/delete_aws_secrets.py public-key --yes
+```
+
+**Safety Features:**
+- Only allows deletion of hardcoded authentication secret names
+- Requires typing "DELETE" (all caps) to confirm
+- Shows all matching secrets before deletion
+- Provides detailed feedback on success/failure
+- Forces permanent deletion by default (ignores retention policies)

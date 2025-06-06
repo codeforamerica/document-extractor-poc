@@ -17,7 +17,7 @@ resource "aws_lambda_function" "text_extract" {
   memory_size                    = 256
   timeout                        = 30
   runtime                        = "python3.13"
-  reserved_concurrent_executions = -1
+  reserved_concurrent_executions = 10  # Set reasonable limit instead of unlimited
   publish                        = true
 
   architectures = ["arm64"]
@@ -26,9 +26,22 @@ resource "aws_lambda_function" "text_extract" {
 
   role = aws_iam_role.execution_role.arn
 
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.text_extract_dlq.arn
+  }
+
   environment {
     variables = local.textract_environment_variables
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_vpc_execution
+  ]
 }
 
 resource "aws_lambda_permission" "allow_bucket_invoke" {
@@ -56,7 +69,7 @@ resource "aws_lambda_function" "write_to_dynamodb" {
   memory_size                    = 256
   timeout                        = 30
   runtime                        = "python3.13"
-  reserved_concurrent_executions = -1
+  reserved_concurrent_executions = 10  # Set reasonable limit instead of unlimited
   publish                        = true
 
   architectures = ["arm64"]
@@ -65,12 +78,25 @@ resource "aws_lambda_function" "write_to_dynamodb" {
 
   role = aws_iam_role.execution_role.arn
 
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.write_to_dynamodb_dlq.arn
+  }
+
   environment {
     variables = {
       SQS_QUEUE_URL  = aws_sqs_queue.queue_to_dynamo.url
       DYNAMODB_TABLE = aws_dynamodb_table.extract_table.name
     }
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_vpc_execution
+  ]
 }
 
 resource "aws_lambda_event_source_mapping" "invoke_dynamodb_writer_from_sqs" {
@@ -98,7 +124,7 @@ resource "aws_lambda_function" "authorizer" {
   memory_size                    = 256
   timeout                        = 30
   runtime                        = "python3.13"
-  reserved_concurrent_executions = -1
+  reserved_concurrent_executions = 10  # Set reasonable limit instead of unlimited
   publish                        = true
 
   architectures = ["arm64"]
@@ -107,11 +133,24 @@ resource "aws_lambda_function" "authorizer" {
 
   role = aws_iam_role.execution_role.arn
 
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  dead_letter_config {
+    target_arn = aws_sqs_queue.authorizer_dlq.arn
+  }
+
   environment {
     variables = {
       ENVIRONMENT = var.environment
     }
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_vpc_execution
+  ]
 }
 
 resource "aws_lambda_permission" "api_gateway_invoke_authorizer" {
@@ -127,4 +166,66 @@ resource "aws_lambda_provisioned_concurrency_config" "authorizer_concurrency" {
   function_name                     = aws_lambda_function.authorizer.function_name
   provisioned_concurrent_executions = 1
   qualifier                         = aws_lambda_function.authorizer.version
+}
+
+# CloudWatch Log Groups for Lambda Functions
+resource "aws_cloudwatch_log_group" "lambda_text_extract" {
+  name              = "/aws/lambda/${local.project}-${var.environment}-text-extract"
+  retention_in_days = 30
+  kms_key_id        = aws_kms_key.encryption.arn
+
+  tags = {
+    Name = "${local.project}-${var.environment}-text-extract-logs"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "lambda_write_to_dynamodb" {
+  name              = "/aws/lambda/${local.project}-${var.environment}-write-to-dynamodb"
+  retention_in_days = 30
+  kms_key_id        = aws_kms_key.encryption.arn
+
+  tags = {
+    Name = "${local.project}-${var.environment}-write-to-dynamodb-logs"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "lambda_authorizer" {
+  name              = "/aws/lambda/${local.project}-${var.environment}-authorizer"
+  retention_in_days = 30
+  kms_key_id        = aws_kms_key.encryption.arn
+
+  tags = {
+    Name = "${local.project}-${var.environment}-authorizer-logs"
+  }
+}
+
+# Dead Letter Queues for Lambda Functions
+resource "aws_sqs_queue" "text_extract_dlq" {
+  name                      = "${local.project}-${var.environment}-text-extract-dlq"
+  kms_master_key_id         = aws_kms_key.encryption.arn
+  message_retention_seconds = 1209600  # 14 days
+
+  tags = {
+    Name = "${local.project}-${var.environment}-text-extract-dlq"
+  }
+}
+
+resource "aws_sqs_queue" "write_to_dynamodb_dlq" {
+  name                      = "${local.project}-${var.environment}-write-to-dynamodb-dlq"
+  kms_master_key_id         = aws_kms_key.encryption.arn
+  message_retention_seconds = 1209600  # 14 days
+
+  tags = {
+    Name = "${local.project}-${var.environment}-write-to-dynamodb-dlq"
+  }
+}
+
+resource "aws_sqs_queue" "authorizer_dlq" {
+  name                      = "${local.project}-${var.environment}-authorizer-dlq"
+  kms_master_key_id         = aws_kms_key.encryption.arn
+  message_retention_seconds = 1209600  # 14 days
+
+  tags = {
+    Name = "${local.project}-${var.environment}-authorizer-dlq"
+  }
 }
