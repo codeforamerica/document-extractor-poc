@@ -122,11 +122,10 @@ resource "aws_iam_role_policy_attachment" "attach_secrets_permission_to_role" {
   policy_arn = aws_iam_policy.secrets_lambda_policy.arn
 }
 
-data "aws_iam_policy" "lambda_textract_execution" {
-  name = "AmazonTextractFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "attach_textract_permission_to_role" {
-  role       = aws_iam_role.execution_role.name
-  policy_arn = data.aws_iam_policy.lambda_textract_execution.arn
+# Textract permissions are now managed via module
+module "textract_permissions" {
+  source = "../../infrastructure/tofu/modules/textract"
+  
+  lambda_role_name     = aws_iam_role.execution_role.name
+  textract_policy_type = "full"
 }
